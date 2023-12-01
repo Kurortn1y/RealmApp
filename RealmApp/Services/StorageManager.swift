@@ -38,8 +38,8 @@ final class StorageManager {
     
     func delete(_ taskList: TaskList) {
 		write {
-			realm.delete(taskList.tasks)
-			realm.delete(taskList)
+            realm.delete(taskList.tasks) // УДАЛЯЕМ СНАЧАЛА МАССИВ ЗАДАЧ ЧТОб НЕ ОСТАЛИСЬ В БАЗЕ
+			realm.delete(taskList) // УДАЛЯЕМ САМ ТАСКЛИСТ
 		}
     }
     
@@ -51,17 +51,36 @@ final class StorageManager {
 
     func done(_ taskList: TaskList) {
 		write {
-			taskList.tasks.setValue(true, forKey: "isComplete")
+			taskList.tasks.setValue(true, forKey: "isComplete") // ИЗМНЯЕМ ЗНАЧЕНИЕ НА ТРУ ДЛЯ ВСЕГО МАССИВА В СПИСКЕ
 		}
     }
 
     // MARK: - Tasks
     func save(_ task: String, withNote note: String, to taskList: TaskList, completion: (Task) -> Void) {
 		write {
-			let task = Task(value: [task, note])
-			taskList.tasks.append(task)
-			completion(task)
+            let task = Task(value: [task, note]) // Создам новую задачу
+            taskList.tasks.append(task) // Тасклист из параметра
+			completion(task) // чтоб обновить ячейку передаем таску
 		}
+    }
+    
+    func delete(_ task: Task) {
+        write {
+            realm.delete(task) // обращается к базе и удаляет таску 
+        }
+    }
+    
+    func edit(_ task: Task, to newValue: String, withNote note: String) {
+        write {
+            task.title = newValue
+            task.note = note
+        }
+    }
+    
+    func done(_ task: Task) { // Принимает одну таску и меняет свойство
+        write {
+            task.isComplete.toggle()
+        }
     }
 	
 	private func write(completion: () -> Void) {

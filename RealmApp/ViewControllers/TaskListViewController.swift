@@ -17,7 +17,7 @@ final class TaskListViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 		createTempData()
-		taskLists = storageManager.realm.objects(TaskList.self)
+		taskLists = storageManager.realm.objects(TaskList.self) // МЕТОД REalm ДЛЯ ЗАГРУЗКИ ИЗ БАЗЫ ДАННЫХ ГДЕ ОПРЕДЕЛЯЕМ ТИП КОТОРЫЙ НУЖНО ЗАГРУЗИТЬ
 		
         let addButton = UIBarButtonItem(
             barButtonSystemItem: .add,
@@ -29,7 +29,7 @@ final class TaskListViewController: UITableViewController {
         navigationItem.leftBarButtonItem = editButtonItem // EDIT делатся чтоб было понятно пользователю что можно делать EDIT
     }
 	
-	override func viewWillAppear(_ animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) { // Для обновления при возвращении на страницу .см Жизненые циклы
 		super.viewWillAppear(animated)
 		tableView.reloadData()
 	}
@@ -41,11 +41,8 @@ final class TaskListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TaskListCell", for: indexPath)
-        var content = cell.defaultContentConfiguration()
         let taskList = taskLists[indexPath.row]
-        content.text = taskList.title
-        content.secondaryText = taskList.tasks.count.formatted()
-        cell.contentConfiguration = content
+        cell.configure(with: taskList)
         return cell
     }
     
@@ -88,6 +85,10 @@ final class TaskListViewController: UITableViewController {
     }
 
     @IBAction func sortingList(_ sender: UISegmentedControl) {
+        taskLists = sender.selectedSegmentIndex == 0
+        ? taskLists.sorted(byKeyPath: "date")
+        : taskLists.sorted(byKeyPath: "title") // сортировка по ""
+        tableView.reloadData()
     }
     
     @objc private func addButtonPressed() {
@@ -120,10 +121,10 @@ extension TaskListViewController {
         present(alertController, animated: true)
     }
     
-    private func save(taskList: String) {
-		storageManager.save(taskList) { taskList in
-			let rowIndex = IndexPath(row: taskLists.firstIndex(of: taskList) ?? 0, section: 0)
-			tableView.insertRows(at: [rowIndex], with: .automatic)
+    private func save(taskList: String) {  // СРАБАТЫВАЕТ В АЛЕРТ КОНТРОЛЛЕРЕ
+		storageManager.save(taskList) { taskList in  // НАХОДИМ ЕГО ИНДЕКС ПО КОТОРОМУ ОН В МАССИВЕ И ОПРЕДЕЛЯЕМ ЯЧЕЙКУ ПО ЭТОМУ ИНДЕКСУ
+            let rowIndex = IndexPath(row: taskLists.firstIndex(of: taskList) ?? 0, section: 0) //rowIndex- индекс тасклиста переданого в замыкании в массиве  taskLists
+			tableView.insertRows(at: [rowIndex], with: .automatic) // создаем ячейку и вставляем по этому индексу с массива
 		}
     }
 	

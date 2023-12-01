@@ -14,13 +14,14 @@ final class TasksViewController: UITableViewController {
     var taskList: TaskList!
 	private let storageManager = StorageManager.shared
     
-	private var currentTasks: Results<Task>!
-    private var completedTasks: Results<Task>!
+	private var currentTasks: Results<Task>!  // [Task] = []
+    private var completedTasks: Results<Task>! // [Task] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = taskList.title
 		
+        // ФИЛЬТРУЕМ ПО СТРИНГЕ
 		currentTasks = taskList.tasks.filter("isComplete = false")
 		completedTasks = taskList.tasks.filter("isComplete = true")
          
@@ -55,6 +56,54 @@ final class TasksViewController: UITableViewController {
         return cell
     }
     
+    //MARK: - UITableViewDelegate
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let task = indexPath.section == 0 // Определяем в какой секции находится
+        ? currentTasks[indexPath.row]
+        : completedTasks[indexPath.row]
+        
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [unowned self] _, _, _ in
+             storageManager.delete(task)
+             tableView.deleteRows(at: [indexPath], with: .automatic)
+         }
+        
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { [unowned self] _, _, isDone in
+            showAlert(with: task) {
+                tableView.reloadRows(at: [indexPath], with: .automatic)
+            }
+            isDone(true) // isDone ЗАКРЫВАЕТ ЯЧЕЙКУ
+        }
+        
+        let doneTitle = task.isComplete ? "undone" : "done"
+        
+        let doneAction = UIContextualAction(style: .normal, title: doneTitle) { [weak self] _, _, isDone in
+            self?.storageManager.done (task)
+            let currentTaskIndex = IndexPath(
+            row: self?.currentTasks.index(of: task) ?? 0,
+            section: 0
+            )
+            let completedTaskIndex = IndexPath (
+            row:self?.completedTasks.index(of: task) ?? 0,
+            section: 1
+            )
+            let destinationIndexRow = indexPath.section == 0 ? completedTaskIndex : currentTaskIndex
+            tableView.moveRow(at: indexPath, to: destinationIndexRow)
+            
+            isDone(true)
+        }
+        editAction.backgroundColor = .orange
+        doneAction.backgroundColor = .green
+        
+        return UISwipeActionsConfiguration(actions: [doneAction,editAction,deleteAction])
+    }
+    
+ 
+    
+    
+    
+    
+    
+    
     @objc private func addButtonPressed() {
         showAlert()
     }
@@ -86,7 +135,7 @@ extension TasksViewController {
         present(alertController, animated: true)
     }
     
-    private func save(task: String, withNote note: String) {
+    private func save(task: String, withNote note: String) { // ВЫЗЫВАЕТСЯ В АЛЕРТЕ
 		storageManager.save(task, withNote: note, to: taskList) { task in
 			let rowIndex = IndexPath(row: currentTasks.index(of: task) ?? 0, section: 0)
 			tableView.insertRows(at: [rowIndex], with: .automatic)
